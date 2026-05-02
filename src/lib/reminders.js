@@ -2,6 +2,16 @@ import { reminders as remindersDb } from './db.js';
 
 let intervalId = null;
 
+/**
+ * Start the reminder scheduler. Polls the database every 15 seconds and fires
+ * any reminders whose `fire_at` timestamp has passed.
+ *
+ * Reminders are stored in SQLite, so they survive bot restarts cleanly — when
+ * the bot boots, due reminders that were missed during downtime fire on the
+ * first tick.
+ *
+ * @param {import('discord.js').Client} client
+ */
 export function startReminderScheduler(client) {
   const tick = async () => {
     const due = remindersDb.due.all(Date.now());
@@ -21,10 +31,16 @@ export function startReminderScheduler(client) {
   intervalId = setInterval(tick, 15_000);
 }
 
+/** Stop the scheduler. Called from the SIGINT/SIGTERM shutdown handler. */
 export function stopReminderScheduler() {
   if (intervalId) clearInterval(intervalId);
 }
 
+/**
+ * Parse human-friendly duration strings into milliseconds.
+ * Accepts: `10s`, `5m`, `2h`, `1d`, `30 minutes`, `2 hours`, etc.
+ * @returns {number|null} duration in ms, or null if input is unparseable
+ */
 export function parseDuration(input) {
   const match = input.trim().match(/^(\d+)\s*(s|m|h|d|sec|min|hour|day|seconds?|minutes?|hours?|days?)$/i);
   if (!match) return null;

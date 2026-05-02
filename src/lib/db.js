@@ -1,3 +1,12 @@
+/**
+ * SQLite persistence layer.
+ *
+ * Schema covers four concerns: moderation warnings, member XP, scheduled
+ * reminders, and per-guild settings. WAL mode is enabled for better concurrent
+ * read/write performance, and all queries use prepared statements (compiled
+ * once at module load) for both speed and SQL-injection safety.
+ */
+
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';

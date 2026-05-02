@@ -1,66 +1,127 @@
 # Discord AI Bot
 
-A feature-rich Discord bot built with **Node.js**, **discord.js v14**, **SQLite**, and the **Claude API**. Includes AI-powered commands, persistent moderation tools, an XP/leveling system, button-based polls, persistent reminders, weather lookup, and auto-moderation.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![discord.js](https://img.shields.io/badge/discord.js-v14-5865F2?logo=discord&logoColor=white)](https://discord.js.org/)
+[![Powered by Claude](https://img.shields.io/badge/AI-Claude%20Sonnet%204.6-D97757)](https://www.anthropic.com/)
+[![Commands](https://img.shields.io/badge/Slash%20Commands-27-blueviolet)](#features)
+
+A production-ready Discord bot built with **Node.js**, **discord.js v14**, **SQLite**, and the **Claude API** — featuring AI-powered commands, persistent moderation tools, an XP/leveling system, button-based polls, persistent reminders, weather lookup, and auto-moderation.
+
+## Highlights
+
+- **27 slash commands** across 7 categories (AI, moderation, info, fun, utility, leveling, meta)
+- **Persistent SQLite storage** with prepared statements — survives restarts cleanly
+- **Auto-loading command and event architecture** — drop a file in a category folder, restart, it just works
+- **Live button-based polls** with real-time vote tallies in the embed
+- **XP system** with cooldowns, level math, and rank tracking
+- **Persistent reminders** fired by a 15s scheduler tick
+- **Anti-spam auto-moderation** — detects message-flooding and auto-mutes
+- **Configurable welcome messages** per server
+- **Hierarchical permission checks** that respect Discord's role hierarchy
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Discord[Discord Gateway]
+    Bot[bot.js<br/>Client + Event Wiring]
+    Commands[commands/<br/>Auto-loaded by category]
+    Events[events/<br/>messageCreate<br/>guildMemberAdd<br/>interactionCreate]
+    Lib[lib/<br/>claude.js / db.js<br/>xp.js / reminders.js]
+    DB[(SQLite<br/>warnings, xp,<br/>reminders, settings)]
+    Claude[Claude API]
+    OpenMeteo[Open-Meteo API]
+
+    Discord <--> Bot
+    Bot --> Commands
+    Bot --> Events
+    Commands --> Lib
+    Events --> Lib
+    Lib --> DB
+    Lib --> Claude
+    Commands --> OpenMeteo
+```
 
 ## Features
 
 ### 🤖 AI (powered by Claude)
-- `/ask <question>` — Ask Claude anything
-- `/summarize <count>` — Summarize the last N messages in the channel
-- `/translate <text> <language>` — Translate text into any language
-- `/tldr <text>` — Compress long text into one or two sentences
-- `/roast <user>` — Generate a playful, lighthearted roast
+| Command | Description |
+|---|---|
+| `/ask <question>` | Ask Claude anything in chat |
+| `/summarize <count>` | Summarize the last N messages |
+| `/translate <text> <language>` | Translate text into any language |
+| `/tldr <text>` | Compress long text into one or two sentences |
+| `/roast <user>` | Generate a playful, lighthearted roast |
 
 ### 🛡️ Moderation
-- `/kick <user> [reason]` — Kick a member
-- `/ban <user> [reason] [delete_days]` — Ban with optional message purge
-- `/mute <user> <minutes> [reason]` — Timeout a member
-- `/warn <user> <reason>` — Issue a warning (stored in database)
-- `/warnings <user>` — View a member's warning history
-- `/clear <count> [user]` — Bulk delete up to 100 messages, optionally per user
-- `/slowmode <seconds>` — Set channel slowmode
-- `/role <add|remove> <user> <role>` — Manage roles
-- `/setwelcome <channel> [message]` — Configure welcome messages
+| Command | Description |
+|---|---|
+| `/kick <user> [reason]` | Kick a member |
+| `/ban <user> [reason] [delete_days]` | Ban with optional message purge |
+| `/mute <user> <minutes> [reason]` | Timeout a member |
+| `/warn <user> <reason>` | Issue a warning (persisted in SQLite) |
+| `/warnings <user>` | View a member's warning history |
+| `/clear <count> [user]` | Bulk delete up to 100 messages |
+| `/slowmode <seconds>` | Set channel slowmode |
+| `/role <add\|remove> <user> <role>` | Manage roles |
+| `/setwelcome <channel> [message]` | Configure welcome messages |
 
 ### 📊 Info
-- `/serverinfo` — Server overview embed
-- `/userinfo [user]` — Member details + roles
-- `/avatar [user]` — Full-size avatar
+| Command | Description |
+|---|---|
+| `/serverinfo` | Server overview embed |
+| `/userinfo [user]` | Member details + roles |
+| `/avatar [user]` | Full-size avatar |
 
 ### 🎉 Fun
-- `/8ball <question>` — Ask the magic 8-ball
-- `/coinflip` — Flip a coin
-- `/poll <question> <options>` — Create a poll with **live button voting** and real-time tallies
+| Command | Description |
+|---|---|
+| `/8ball <question>` | Magic 8-ball |
+| `/coinflip` | Flip a coin |
+| `/poll <question> <options>` | Live button-voting polls |
 
 ### 🔧 Utility
-- `/remind <when> <message>` — **Persistent reminders** that survive bot restarts (e.g. `10m`, `2h`, `1d`)
-- `/color <hex>` — Preview a hex color with RGB values
-- `/weather <city>` — Current weather (Open-Meteo, no API key required)
-- `/math <expression>` — Evaluate math expressions (powered by mathjs)
+| Command | Description |
+|---|---|
+| `/remind <when> <message>` | Persistent reminders (`10m`, `2h`, `1d`) |
+| `/color <hex>` | Preview a hex color with RGB |
+| `/weather <city>` | Current weather (Open-Meteo) |
+| `/math <expression>` | Evaluate math expressions |
 
-### 🏆 Leveling System
-- `/rank [user]` — Show level, XP, and progress bar
-- `/leaderboard` — Top 10 members
-- XP is awarded automatically (15 XP per message, 60s cooldown)
-- Level-up announcements
+### 🏆 Leveling
+| Command | Description |
+|---|---|
+| `/rank [user]` | Level, XP, progress bar |
+| `/leaderboard` | Top 10 members |
 
-### 🚨 Background features
+### 🚨 Background systems
 - **Anti-spam** — Auto-mutes users sending 5 identical messages in 10 seconds
-- **Welcome messages** — Configurable per-server greeting embeds for new members
+- **Welcome messages** — Configurable greeting embeds for new members
 - **Persistent reminders** — Stored in SQLite, fired by a 15-second tick scheduler
-- **Auto-loading commands and events** — Drop a file into a category folder, restart, and it works
+- **Auto-loading** — Commands and events are discovered at boot from their category folders
 
 ## Tech stack
 
 | Layer | Choice | Why |
 |---|---|---|
 | Runtime | Node.js 18+ | Native `fetch`, ESM modules |
-| Discord client | `discord.js` v14 | Industry standard, full slash command + button support |
+| Discord client | `discord.js` v14 | Industry standard, full slash + button support |
 | AI | `@anthropic-ai/sdk` (Claude Sonnet 4.6) | Modern long-context model |
 | Database | `better-sqlite3` | Synchronous, fast, no async overhead, no separate server |
 | Math eval | `mathjs` | Safe expression evaluation |
 | Weather | Open-Meteo API | Free, no API key |
 | Config | `dotenv` | Standard env var loader |
+
+## Why this project?
+
+Most beginner Discord bots stop at "hello world + a few commands." This one is structured the way I'd build a small production service:
+
+- **Separation of concerns** — `lib/` handles persistence, math, and external APIs; `commands/` is pure Discord interaction logic; `events/` handles passive flows.
+- **Auto-discovery instead of hard-coded imports** — adding a new command is a single file in a category folder; no central registry to update.
+- **Prepared SQL statements** — every database call is a parameterized prepared statement, eliminating an entire class of injection bugs and keeping per-query cost minimal.
+- **Permission-aware design** — moderation commands declare required permissions via `setDefaultMemberPermissions`, and runtime checks respect Discord's role hierarchy so the bot can't act above itself.
+- **Graceful shutdown** — `SIGINT`/`SIGTERM` handlers stop the reminder scheduler and cleanly destroy the client.
 
 ## Project structure
 
@@ -88,13 +149,13 @@ discord-ai-bot/
 │       ├── guildMemberAdd.js   # Welcome messages
 │       ├── interactionCreate.js # Slash + button routing
 │       └── index.js
-├── data/
-│   └── bot.db                  # SQLite (auto-created, gitignored)
 ├── .env.example
 ├── .gitignore
 ├── package.json
 └── README.md
 ```
+
+`data/bot.db` is created automatically at first run (gitignored).
 
 ## Setup
 
@@ -103,9 +164,7 @@ discord-ai-bot/
 1. Go to https://discord.com/developers/applications → **New Application**
 2. Under **Bot** → **Reset Token** → copy this as `DISCORD_TOKEN`
 3. Under **General Information** → copy **Application ID** as `DISCORD_CLIENT_ID`
-4. Under **Bot → Privileged Gateway Intents**, enable:
-   - **Server Members Intent**
-   - **Message Content Intent**
+4. Under **Bot → Privileged Gateway Intents**, enable **Server Members Intent** and **Message Content Intent**
 
 ### 2. Invite the bot
 
@@ -115,7 +174,7 @@ Replace `YOUR_CLIENT_ID` and visit:
 https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=1374658854006&scope=bot+applications.commands
 ```
 
-This grants: Kick, Ban, Moderate, Manage Roles, Manage Messages, Manage Channels, Read/Send Messages, Embed Links.
+Permissions granted: Kick, Ban, Moderate, Manage Roles, Manage Messages, Manage Channels, Read/Send Messages, Embed Links.
 
 ### 3. Get an Anthropic API key
 
@@ -132,11 +191,17 @@ npm run deploy   # registers slash commands (re-run after adding commands)
 npm start        # boots the bot
 ```
 
-You should see `Logged in as <bot name>` and `Loaded N commands across 6 categories`.
+Expected output:
+
+```
+Logged in as <bot name>
+Loaded 27 commands across 7 categories
+Serving N guild(s)
+```
 
 ## Deployment to Railway
 
-1. Push the project to GitHub.
+1. Push to GitHub.
 2. Sign in at https://railway.app → **New Project → Deploy from GitHub repo**.
 3. Add the three environment variables.
 4. Railway auto-runs `npm start`.
@@ -144,11 +209,11 @@ You should see `Logged in as <bot name>` and `Loaded N commands across 6 categor
 
 ## Notes
 
-- Slash commands take up to 60 minutes to propagate globally on first registration.
-- The XP system rewards 15 XP per message with a 60s cooldown to prevent farming.
+- Slash commands take up to 60 minutes to propagate globally on first registration. For instant testing, register per-guild via `Routes.applicationGuildCommands`.
+- The XP system rewards 15 XP per message with a 60-second cooldown to prevent farming.
 - Anti-spam triggers after 5 identical messages within 10 seconds; offenders are auto-muted for 5 minutes.
 - All persistent state (warnings, XP, reminders, settings) lives in `data/bot.db` — back this file up if you care about retaining data.
 
 ## License
 
-MIT
+[MIT](LICENSE)
